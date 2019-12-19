@@ -1124,7 +1124,7 @@ void Vector::ToNVector(N_Vector &nv)
          }
          else
          {
-            MFEM_ASSERT(N_VOwnData_Cuda(nv) == SUNFALSE, "invalid memory type for cuda N_Vector");
+            MFEM_ABORT("invalid memory type for cuda N_Vector");
          }
          break;
 #endif
