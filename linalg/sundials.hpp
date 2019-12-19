@@ -64,6 +64,14 @@ protected:
    bool Parallel() const { return false; }
 #endif
 
+#ifdef MFEM_USE_CUDA
+   bool Cuda() const
+   { return (N_VGetVectorID(y) != SUNDIALS_NVEC_CUDA); }
+#else
+   bool Cuda() const { return false; }
+#endif
+
+
    /// Default scalar relative tolerance.
    static constexpr double default_rel_tol = 1e-4;
    /// Default scalar absolute tolerance.
