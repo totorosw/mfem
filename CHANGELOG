@@ -74,21 +74,28 @@ Discretization improvements
   in physical space. See INSTALL for details on building MFEM with GSLIB, and
   miniapps/gslib for examples of how to use this feature.
 
+- Added support for serendipity elements of arbitrary order on affinely-mapped
+  square elements. Basis functions for these elements can be visualized using
+  an option in the display-basis miniapp.
+
 - Added support for complex-valued finite element operators and fields using a
   2x2 block structured linear system to mimic complex arithmetic. New classes
   include: ComplexGridFunction, SesquilinearForm, ComplexLinearForm, and their
   parallel counterparts.
 
+- Two integrators related to Stokes problems, (Q grad u, v) and (Q div v, u),
+  where u and the components of v are in H1, were added/modified to support full
+  and partial assembly modes. See the new GradientIntegrator and the updated
+  VectorDivergenceIntegrator classes in fem/bilininteg.hpp, as well as the PA
+  kernels in fem/bilininteg_gradient.cpp and fem/bilininteg_divergence.cpp.
+
 - Diagonals of partially assembled operators can now be computed efficiently.
   See the new methods AssembleDiagonal in BilinearForm, AssembleDiagonalPA in
   BilinearFormIntegrator and the implementations in fem/bilininteg_*.cpp.
 
-- Added FormRectangularLinearSystem method to MixedBilinearForm. This enables
-  repeated application of essential boundary conditions to rectangular
-  operators.
-
-- The divergence and gradient bilinear integrators were added with full and
-  partial assembly capabilities.
+- Added a new method, MixedBilinearForm::FormRectangularLinearSystem, that can
+  be used to impose boundary conditions on the non-square off-diagonal blocks of
+  a block operator (similar to FormLinearSystem in the square case).
 
 - Added initial support for partially assembled NonlinearForms.
 
