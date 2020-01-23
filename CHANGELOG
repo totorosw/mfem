@@ -97,13 +97,16 @@ Discretization improvements
   be used to impose boundary conditions on the non-square off-diagonal blocks of
   a block operator (similar to FormLinearSystem in the square case).
 
-- Added initial support for partially assembled NonlinearForms.
-
-- Added a nonlinear full and partial assembly enabled vector valued convection
-  integrator.
-
 - Extended the support for partial assembly to vector mass and vector diffusion
   bilinear integrators.
+
+- Added initial support for NonlinearForms to support the partial assembly mode.
+
+- Added a nonlinear vector valued convection integrator (Q u \cdot grad u, v)
+  where u_i and v_i are in H1. This form occurs e.g. in the Navier-Stokes
+  equations. The integrator supports the partial assembly mode for its
+  action. In full assembly mode we also provide the GetGradient method that
+  computes the linearized version of the integrator.
 
 Linear and nonlinear solvers
 ----------------------------

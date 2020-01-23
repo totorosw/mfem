@@ -119,6 +119,41 @@ double pa_divergence_testnd(int dim,
    return field2.Norml2();
 }
 
+TEST_CASE("PA VectorDivergence", "[PartialAssembly]")
+{
+   SECTION("2D")
+   {
+      // Check if div([y, -x]) == 0
+      REQUIRE(pa_divergence_testnd(2, solenoidal_field2d, zero_field)
+              == Approx(0.0));
+
+      // Check if div([x*y, -x+y]) == 1 + y
+      REQUIRE(pa_divergence_testnd(2,
+                                   non_solenoidal_field2d,
+                                   div_non_solenoidal_field2d)
+              == Approx(0.0));
+   }
+
+   SECTION("3D")
+   {
+      // Check if
+      // div([-Cos[z] Sin[x],
+      //      -Cos[x] Cos[z],
+      //       Cos[x] Sin[y] + Cos[x] Sin[z]) == 0
+      REQUIRE(pa_divergence_testnd(3, solenoidal_field3d, zero_field)
+              == Approx(0.0));
+
+      // Check if
+      // div([Cos[x] Cos[y],
+      //      Sin[x] Sin[z],
+      //      Cos[z] Sin[x]]) == -Cos[y] Sin[x] - Sin[x] Sin[z]
+      REQUIRE(pa_divergence_testnd(3,
+                                   non_solenoidal_field3d,
+                                   div_non_solenoidal_field3d)
+              == Approx(0.0));
+   }
+}
+
 double testfunc(const Vector &x)
 {
    double r = cos(x(0)) + sin(x(1));
@@ -187,41 +222,6 @@ double pa_gradient_testnd(int dim,
    return field2.Norml2();
 }
 
-TEST_CASE("PA VectorDivergence", "[PartialAssembly]")
-{
-   SECTION("2D")
-   {
-      // Check if div([y, -x]) == 0
-      REQUIRE(pa_divergence_testnd(2, solenoidal_field2d, zero_field)
-              == Approx(0.0));
-
-      // Check if div([x*y, -x+y]) == 1 + y
-      REQUIRE(pa_divergence_testnd(2,
-                                   non_solenoidal_field2d,
-                                   div_non_solenoidal_field2d)
-              == Approx(0.0));
-   }
-
-   SECTION("3D")
-   {
-      // Check if
-      // div([-Cos[z] Sin[x],
-      //      -Cos[x] Cos[z],
-      //       Cos[x] Sin[y] + Cos[x] Sin[z]) == 0
-      REQUIRE(pa_divergence_testnd(3, solenoidal_field3d, zero_field)
-              == Approx(0.0));
-
-      // Check if
-      // div([Cos[x] Cos[y],
-      //      Sin[x] Sin[z],
-      //      Cos[z] Sin[x]]) == -Cos[y] Sin[x] - Sin[x] Sin[z]
-      REQUIRE(pa_divergence_testnd(3,
-                                   non_solenoidal_field3d,
-                                   div_non_solenoidal_field3d)
-              == Approx(0.0));
-   }
-}
-
 TEST_CASE("PA Gradient", "[PartialAssembly]")
 {
    SECTION("2D")
@@ -229,6 +229,7 @@ TEST_CASE("PA Gradient", "[PartialAssembly]")
       // Check if grad(Cos[x] + Sin[y]) == [-Sin[x], Cos[y]]
       REQUIRE(pa_gradient_testnd(2, testfunc, grad_testfunc) == Approx(0.0));
    }
+
    SECTION("3D")
    {
       // Check if grad(Cos[x] + Sin[y] + Cos[z]) == [-Sin[x], Cos[y], -Sin[z]]
@@ -240,6 +241,7 @@ template <typename INTEGRATOR>
 double test_vector_pa_integrator(int dim)
 {
    Mesh *mesh;
+
    if (dim == 2)
    {
       mesh = new Mesh(2, 2, Element::QUADRILATERAL, 0, 1.0, 1.0);
@@ -254,6 +256,7 @@ double test_vector_pa_integrator(int dim)
    FiniteElementSpace fes(mesh, &fec, dim);
 
    GridFunction x(&fes), y_fa(&fes), y_pa(&fes);
+
    x.Randomize(1);
 
    BilinearForm blf_fa(&fes);
@@ -304,6 +307,7 @@ TEST_CASE("PA Vector Diffusion", "[PartialAssembly], [VectorPA]")
 double test_nl_convection_nd(int dim)
 {
    Mesh *mesh;
+
    if (dim == 2)
    {
       mesh = new Mesh(2, 2, Element::QUADRILATERAL, 0, 1.0, 1.0);
@@ -318,6 +322,7 @@ double test_nl_convection_nd(int dim)
    FiniteElementSpace fes(mesh, &fec, dim);
 
    GridFunction x(&fes), y_fa(&fes), y_pa(&fes);
+
    x.Randomize(3);
 
    NonlinearForm nlf_fa(&fes);
@@ -334,6 +339,7 @@ double test_nl_convection_nd(int dim)
    double difference = y_fa.Norml2();
 
    delete mesh;
+
    return difference;
 }
 
