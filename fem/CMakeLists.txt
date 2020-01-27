@@ -14,6 +14,8 @@ set(SRCS
   bilinearform_ext.cpp
   bilininteg.cpp
   bilininteg_diffusion.cpp
+  bilininteg_divergence.cpp
+  bilininteg_gradient.cpp
   bilininteg_mass.cpp
   bilininteg_divergence.cpp
   bilininteg_gradient.cpp
