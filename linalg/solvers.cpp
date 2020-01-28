@@ -803,10 +803,12 @@ void FGMRESSolver::Mult(const Vector &b, Vector &x) const
       return;
    }
 
-   if (print_level>=0)
+   if (print_level == 1)
+   {
       mfem::out << "   Pass : " << setw(2) << 1
                 << "   Iteration : " << setw(3) << 0
                 << "  || r || = " << beta << endl;
+   }
 
    Array<Vector*> v(m+1);
    Array<Vector*> z(m+1);
@@ -862,17 +864,25 @@ void FGMRESSolver::Mult(const Vector &b, Vector &x) const
 
          double resid = fabs(s(i+1));
          MFEM_ASSERT(IsFinite(resid), "resid = " << resid);
-         if (print_level >= 0)
+         if (print_level == 1)
+         {
             mfem::out << "   Pass : " << setw(2) << (j-1)/m+1
                       << "   Iteration : " << setw(3) << j
                       << "  || r || = " << resid << endl;
+         }
 
-         if ( resid <= final_norm)
+         if (resid <= final_norm)
          {
             Update(x, i, H, s, z);
             final_norm = resid;
             final_iter = j;
             converged = 1;
+
+            if (print_level == 2)
+            {
+               mfem::out << "Number of FGMRES iterations: " << final_iter << endl;
+            }
+
             for (i= 0; i<=m; i++)
             {
                if (v[i]) { delete v[i]; }
@@ -882,7 +892,7 @@ void FGMRESSolver::Mult(const Vector &b, Vector &x) const
          }
       }
 
-      if (print_level>=0)
+      if (print_level == 1)
       {
          mfem::out << "Restarting..." << endl;
       }
@@ -893,11 +903,17 @@ void FGMRESSolver::Mult(const Vector &b, Vector &x) const
       subtract(b,r,r);
       beta = Norm(r);
       MFEM_ASSERT(IsFinite(beta), "beta = " << beta);
-      if ( beta <= final_norm)
+      if (beta <= final_norm)
       {
          final_norm = beta;
          final_iter = j;
          converged = 1;
+
+         if (print_level == 2)
+         {
+            mfem::out << "Number of FGMRES iterations: " << final_iter << endl;
+         }
+
          for (i= 0; i<=m; i++)
          {
             if (v[i]) { delete v[i]; }
@@ -913,8 +929,13 @@ void FGMRESSolver::Mult(const Vector &b, Vector &x) const
       if (z[i]) { delete z[i]; }
    }
    converged = 0;
-   return;
 
+   if (print_level >= 0)
+   {
+      mfem::out << "FGMRES: No convergence!" << endl;
+   }
+
+   return;
 }
 
 
