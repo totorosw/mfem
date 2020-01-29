@@ -11274,6 +11274,7 @@ RBFFiniteElement::RBFFiniteElement(int D, int nD, double h,
      rbf(func),
      distance(dist)
 {
+   distance.SetDim(D);
    SetPositions();
 }
 
