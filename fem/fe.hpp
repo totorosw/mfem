@@ -2631,6 +2631,7 @@ class RBFFunction
 {
 public:
    RBFFunction() { };
+   virtual ~RBFFunction() { }
    
    // Base RBF functions
    virtual double BaseFunction(double r) const = 0;
@@ -2642,6 +2643,7 @@ class GaussianRBF : public RBFFunction
 {
 public:
    GaussianRBF() { };
+   virtual ~GaussianRBF() { }
    
    virtual double BaseFunction(double r) const;
    virtual double BaseDerivative(double r) const;
@@ -2653,6 +2655,7 @@ class MultiquadricRBF : public RBFFunction
 {
 public:
    MultiquadricRBF() { };
+   virtual ~MultiquadricRBF() { }
    
    virtual double BaseFunction(double r) const;
    virtual double BaseDerivative(double r) const;
@@ -2664,6 +2667,7 @@ class InvMultiquadricRBF : public RBFFunction
 {
 public:
    InvMultiquadricRBF() { };
+   virtual ~InvMultiquadricRBF() { }
    
    virtual double BaseFunction(double r) const;
    virtual double BaseDerivative(double r) const;
@@ -2677,6 +2681,7 @@ protected:
    int Dim;
 public:
    DistanceMetric(int D) { Dim = D; }
+   virtual ~DistanceMetric() { }
 
    virtual void SetDim(int D) { Dim = D; }
    
@@ -2694,6 +2699,7 @@ class EuclideanDistance : public DistanceMetric
 {
 public:
    EuclideanDistance(int D) : DistanceMetric(D) { };
+   virtual ~EuclideanDistance() { }
 
    virtual void Distance(const Vector &x,
                          double &r) const;
@@ -2709,6 +2715,7 @@ class ManhattanDistance : public DistanceMetric
 {
 public:
    ManhattanDistance(int D) : DistanceMetric(D) { };
+   virtual ~ManhattanDistance() { }
 
    virtual void Distance(const Vector &x,
                          double &r) const;
@@ -2725,6 +2732,7 @@ class KernelFiniteElement : public ScalarFiniteElement
 public:
    KernelFiniteElement(int D, int G, int Do, int O, int F)
       : ScalarFiniteElement(D, G, Do, O, F) { }
+   virtual ~KernelFiniteElement() { }
    
    virtual const DenseMatrix &position() const = 0;
    
