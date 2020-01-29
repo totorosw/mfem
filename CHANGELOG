@@ -140,6 +140,11 @@ New and updated examples and miniapps
 - The mesh-optimizer and pmesh-optimizer miniapps have been updated to
   demonstrate the new r-adaptivity capabilities of TMOP.
 
+- Added a collection of 7 playful miniapps in miniapps/toys that illustrate the
+  meshing and visualization features of the library in more relaxed settings.
+  The toys include simulations of cellular automata, Rubik's cube, Mandelbrot
+  set, a tool to convert any image to mfem mesh, and more.
+
 New and improved solvers and preconditioners
 --------------------------------------------
 - Added support for using the Ginkgo library's solvers and preconditioners.
@@ -154,15 +159,6 @@ New and improved solvers and preconditioners
 
 - Added a modification of ex9 in examples/hiop that demonstrates the nonlinear
   constrained optimization interface and the use of the SLBQP and HiOp solvers.
-
-- Added two new miniapps: Find Points (serial + parallel) and Field Diff in
-  miniapps/gslib that show how GSLIB-FindPoints can be used to interpolate a
-  (Par)GridFunction in an arbitrary number of physical space points in 2D and
-  3D. The GridFunction must be in H1 and in the same space as the mesh that is
-  used to find the points.
-
-- Extended the support for partial assembly to vector mass and vector diffusion
-  bilinear integrators.
 
 Improved testing
 ----------------
