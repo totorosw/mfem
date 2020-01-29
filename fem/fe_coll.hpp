@@ -840,25 +840,29 @@ public:
    virtual ~Local_FECollection() { delete Local_Element; }
 };
 
-// /// Radial basis function collection
-// class KernelFECollection : public FiniteElementCollection
-// {
-// private:
-//    const KernelFiniteElement FE;
+/// Radial basis function collection
+class KernelFECollection : public FiniteElementCollection
+{
+private:
+   const KernelFiniteElement *FE;
 
-// public:
-//    KernelFECollection();
+   bool ValidGeomType(int GeomType) const;
+   
+public:
+   KernelFECollection(int D, int numPointsD, int h,
+                      RBFFunction *func, DistanceMetric *dist,
+                      int order = -1);
+   
+   virtual const FiniteElement *
+   FiniteElementForGeometry(int GeomType) const;
 
-//    virtual const FiniteElement *
-//    FiniteElementForGeometry(int GeomType) const;
+   virtual int DofForGeometry(int GeomType) const;
 
-//    virtual int DofForGeometry(int GeomType) const;
+   virtual int * DofOrderForOrientation(int GeomType, int Or) const;
 
-//    virtual int * DofOrderForOrientation(int GeomType, int Or) const;
+   virtual const char * Name() const { return "Kernel"; }
+};
 
-//    virtual const char * Name() const { return "Quadratic"; }
-// };
-
-} // namespace MFEM
+} // namespace mfem
 
 #endif
