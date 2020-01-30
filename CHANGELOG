@@ -110,6 +110,10 @@ Discretization improvements
 
 Linear and nonlinear solvers
 ----------------------------
+- Added a LinearSolve(A,X) convenience method to solve linear systems. In the
+  trivial cases, i.e., square matrices of size N=1 or N=2, the system is solved
+  directly, otherwise, LU factorization is employed.
+
 - Added a general interface for specifying and solving nonlinear constrained
   optimization problems through the new classes OptimizationProblem and
   OptimizationSolver, see linalg/solver.hpp
@@ -122,6 +126,9 @@ Linear and nonlinear solvers
   more details see linalg/ginkgo.hpp and the example code in examples/gingko.
 
 - Added Adams-Bashforth and Adams-Moulton time integrators.
+
+- Added a block ILU(0) preconditioner for DG-type discretizations. Example 9
+  (DG advection) now takes advantage of this for implicit time integration.
 
 New and updated examples and miniapps
 -------------------------------------
@@ -159,6 +166,9 @@ New and improved solvers and preconditioners
 
 - Added a modification of ex9 in examples/hiop that demonstrates the nonlinear
   constrained optimization interface and the use of the SLBQP and HiOp solvers.
+
+- Example 9 and 9p now support implicit time integration, using the new block
+  ILU(0) solvers as preconditioners for the linear system.
 
 Improved testing
 ----------------
