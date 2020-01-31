@@ -2749,8 +2749,10 @@ private:
    mutable DenseMatrix ddr;
 #endif
    int numPointsD; // Number of points across the element in each D
-   double h; // Shape parameter
-   double hInv; // Inverse shape parameter
+   double delta; // Distance between points
+   double h; // Shape parameter, dimensionless
+   double hPhys; // Shape parameter times distance between points
+   double hPhysInv; // Inverse shape parameter
    DenseMatrix pos; // Positions of points
    RBFFunction *rbf;
    DistanceMetric *distance;
@@ -2788,7 +2790,7 @@ private:
    mutable Array<DenseMatrix> dM;
    mutable DenseMatrixInverse Minv;
 #endif
-   int polyOrd, numPoly;
+   int polyOrd, numPoly, numPoly1d;
    KernelFiniteElement *baseFE;
 
    virtual void GetPoly(const Vector &x,

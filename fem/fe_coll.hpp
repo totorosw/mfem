@@ -849,7 +849,7 @@ private:
    bool ValidGeomType(int GeomType) const;
    
 public:
-   KernelFECollection(int D, int numPointsD, int h,
+   KernelFECollection(int D, int numPointsD, double h,
                       RBFFunction *func, DistanceMetric *dist,
                       int order = -1);
    
