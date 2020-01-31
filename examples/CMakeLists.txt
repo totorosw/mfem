@@ -25,7 +25,7 @@ list(APPEND ALL_EXE_SRCS
   ex16.cpp
   ex17.cpp
   ex18.cpp
-  testMeshless.cpp
+  ex20.cpp
   )
 
 if (MFEM_USE_MPI)

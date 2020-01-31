@@ -118,11 +118,16 @@ int main(int argc, char *argv[])
    ip.y = 0.5;
    ip.z = 0.5;
    fe->CalcShape(ip, shape);
-   // fe->CalcDShape(ip, dshape);
+   fe->CalcDShape(ip, dshape);
 
    for (int i = 0; i < dof; ++i)
    {
-      cout << shape(i) << endl;
+      cout << shape(i) << "\t";
+      for (int d = 0; d < dim; ++d)
+      {
+         cout << dshape(i, d) << "\t";
+      }
+      cout << endl;
    }
    
    // Free memory
