@@ -2544,7 +2544,8 @@ KernelFECollection::KernelFECollection(int D,
                                        double h,
                                        RBFFunction *func,
                                        DistanceMetric *dist,
-                                       int order)
+                                       const int order,
+                                       const int btype)
 {
    if (order == -1)
    {
@@ -2555,7 +2556,7 @@ KernelFECollection::KernelFECollection(int D,
    {
       RBFFiniteElement *FEBase = new RBFFiniteElement(D, numPointsD, h,
                                                       func, dist);
-      FE = new RKFiniteElement(order, FEBase);
+      FE = new RKFiniteElement(order, btype, FEBase);
    }
 }
 
