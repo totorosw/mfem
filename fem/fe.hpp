@@ -2688,10 +2688,8 @@ public:
    virtual void Distance(const Vector &x,
                          double &r) const = 0;
    virtual void DDistance(const Vector &x,
-                          const Vector &dx,
                           Vector &dr) const = 0;
    virtual void DDDistance(const Vector &x,
-                           const Vector &dx,
                            DenseMatrix &ddr) const = 0;
 };
 
@@ -2704,10 +2702,8 @@ public:
    virtual void Distance(const Vector &x,
                          double &r) const;
    virtual void DDistance(const Vector &x,
-                          const Vector &dx,
                           Vector &dr) const;
    virtual void DDDistance(const Vector &x,
-                           const Vector &dx,
                            DenseMatrix &ddr) const;
 };
 
@@ -2720,10 +2716,8 @@ public:
    virtual void Distance(const Vector &x,
                          double &r) const;
    virtual void DDistance(const Vector &x,
-                          const Vector &dx,
                           Vector &dr) const;
    virtual void DDDistance(const Vector &x,
-                           const Vector &dx,
                            DenseMatrix &ddr) const;
 };
 
@@ -2758,8 +2752,6 @@ private:
    DistanceMetric *distance;
    void SetPositions();
    
-   void DDistanceVec(Vector &dy) const;
-
 public:
    RBFFiniteElement(int D, int numPointsD, double h,
                     RBFFunction *func, DistanceMetric *dist);
