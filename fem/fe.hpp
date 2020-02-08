@@ -2839,10 +2839,16 @@ public:
       : ScalarFiniteElement(D, G, Do, O, F) { }
    virtual ~KernelFiniteElement() { }
    
-   virtual const DenseMatrix &position() const = 0;
-   
    virtual void IntRuleToVec(const IntegrationPoint &ip,
                              Vector &vec) const;
+   
+   using FiniteElement::Project;
+   
+   virtual void Project(Coefficient &coeff,
+                        ElementTransformation &Trans, Vector &dofs) const;
+
+   virtual void Project(const FiniteElement &fe, ElementTransformation &Trans,
+                        DenseMatrix &I) const;
 };
 
 class RBFFiniteElement : public KernelFiniteElement
@@ -2875,8 +2881,6 @@ public:
                     const int distType);
    virtual ~RBFFiniteElement() { delete rbf; delete distance; }
    
-   virtual const DenseMatrix &position() const { return pos; }
-
    virtual void CalcShape(const IntegrationPoint &ip,
                           Vector &shape) const;
    virtual void CalcDShape(const IntegrationPoint &ip,
@@ -2943,8 +2947,6 @@ public:
                    const int distType,
                    const int order);
    virtual ~RKFiniteElement() { delete baseFE; }
-   
-   virtual const DenseMatrix &position() const { return baseFE->position(); }
    
    static int GetNumPoly(int polyOrd, int dim);
    
