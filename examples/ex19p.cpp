@@ -159,6 +159,7 @@ int main(int argc, char *argv[])
    double newton_abs_tol = 1e-6;
    int newton_iter = 500;
    double mu = 1.0;
+   bool adios2 = false;
 
    OptionsParser args(argc, argv);
    args.AddOption(&mesh_file, "-m", "--mesh",
@@ -180,6 +181,9 @@ int main(int argc, char *argv[])
                   "Maximum iterations for the Newton solve.");
    args.AddOption(&mu, "-mu", "--shear-modulus",
                   "Shear modulus for the neo-Hookean material.");
+   args.AddOption(&adios2, "-adios2", "--adios2-streams", "-no-adios2",
+                  "--no-adios2-streams",
+                  "Save data adios2 streams, files can use ParaView (paraview.org) VTX visualization.");
    args.Parse();
    if (!args.Good())
    {
@@ -342,30 +346,27 @@ int main(int argc, char *argv[])
       ofstream deformation_ofs(deformation_name.str().c_str());
       deformation_ofs.precision(8);
       x_def.Save(deformation_ofs);
+   }
 
+   // 19. Optionally output a BP (binary pack file) ADIOS2DataCollection
+   //     ADIOS2: https://adios2.readthedocs.io
 #ifdef MFEM_USE_ADIOS2
-      if (myid == 0)
-      {
-         std::cout << "Using ADIOS2 BP output\n";
-      }
-      // set appropriate name for bp dataset
+   if (adios2)
+   {
       std::string postfix(mesh_file);
       postfix.erase(0, std::string("../data/").size() );
       postfix += "_o" + std::to_string(order);
+      const std::string collection_name = "ex19-p-" + postfix + ".bp";
 
-      // create adios2stream for output with arguments: name, mode, comm
-      // always use the bp or bp4 extension
-      adios2stream adios2output("ex19p_" + postfix + ".bp",
-                                adios2stream::openmode::out, MPI_COMM_WORLD);
-      // print the ParMesh
-      pmesh->Print(adios2output);
-      // save a (ParGridFunction) solution or many with a variable name
-      p_gf.Save(adios2output, "pressure");
-      x_def.Save(adios2output, "deformation");
-#endif
+      ADIOS2DataCollection adios2_dc(MPI_COMM_WORLD, collection_name, pmesh);
+      adios2_dc.SetParameter("SubStreams", std::to_string(num_procs/2) );
+      adios2_dc.RegisterField("pressure", &p_gf);
+      adios2_dc.RegisterField("deformation", &x_def);
+      adios2_dc.Save();
    }
+#endif
 
-   // 19. Free the used memory
+   // 20. Free the used memory
    delete pmesh;
 
    MPI_Finalize();

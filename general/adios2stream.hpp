@@ -19,7 +19,7 @@
 #include "../config/config.hpp"
 
 #include <map>
-#include <memory>  // std::shared_ptr
+#include <memory>  // std::unique_ptr
 #include <string>
 #include <set>
 
@@ -36,6 +36,7 @@ namespace mfem
 class Vector;
 class GridFunction;
 class Mesh;
+class ADIOS2DataCollection;
 
 template <class T>
 class Array;
@@ -46,6 +47,7 @@ class adios2stream
    friend class Vector;
    friend class GridFunction;
    friend class Mesh;
+   friend class ADIOS2DataCollection;
 
 public:
    /**
@@ -70,7 +72,7 @@ public:
     * @param mode adios2stream::openmode::in (Read), adios2stream::openmode::out
     * (Write)
     * @param comm MPI communicator establishing domain for fstream
-    * @param engineType available adios2 engine, default is BP3 file
+    * @param engine_type available adios2 engine, default is BPFile
     *        see https://adios2.readthedocs.io/en/latest/engines/engines.html
     * @throws std::invalid_argument (user input error) or std::runtime_error
     *         (system error)
@@ -84,7 +86,7 @@ public:
     * @param name stream name
     * @param mode adios2stream::openmode::in (Read), adios2stream::openmode::out
     * (Write)
-    * @param engineType available adios2 engine, default is BP3 file
+    * @param engine_type available adios2 engine, default is BPFile
     * @throws std::invalid_argument (user input error) or std::runtime_error
     *         (system error)
     */
@@ -109,7 +111,7 @@ public:
     * @param key input parameter key
     * @param value input parameter value
     */
-   void SetParameter(const std::string key, const std::string value);
+   void SetParameter(const std::string key, const std::string value) noexcept;
 
    /** Begins an I/O step */
    void BeginStep();
@@ -118,12 +120,22 @@ public:
    void EndStep();
 
    /**
-       * Associates a physical time with the current I/O step
-       * input physical time parameter.
-       * @param time input physical time
-       * @param variable_name variable name associated with time
-       */
-   void SetTime(const double time, const std::string& variable_name = "TIME");
+    * Associates a physical time with the current I/O step as TIME variable
+    * @param time input physical time
+    */
+   void SetTime(const double time);
+
+   /**
+    * Associates a current time step (cycle) with the current I/O step as CYCLE variable
+    * @param cycle physical time
+    */
+   void SetCycle(const int cycle);
+
+   /**
+    * Input to the Global Geometry Refiner
+    * @param level input level
+    */
+   void SetRefinementLevel(const int level) noexcept;
 
    /** Return the current step between BeginStep and EndStep */
    size_t CurrentStep() const;
@@ -151,13 +163,16 @@ private:
    const openmode adios2_openmode;
 
    /** main adios2 object that owns all the io and engine components */
-   std::shared_ptr<adios2::ADIOS> adios;
+   std::unique_ptr<adios2::ADIOS> adios;
 
    /** io object to set parameters, variables and engines */
    adios2::IO io;
 
    /** heavy object doing system-level I/O operations */
    adios2::Engine engine;
+
+   /** true: transient problem (SetTime is called) */
+   bool transient = false;
 
    /** true : engine step is active after engine.BeginStep(),
      *  false: inactive after engine.EndStep() */
@@ -185,9 +200,6 @@ private:
 
    /** saves the variable names representing point data */
    std::set<std::string> point_data_variables;
-
-   /** stores the value of the physical time variable from SetTime */
-   std::string time_variable_name = "";
 
    /**
     * Map glvis element types to VTK element types

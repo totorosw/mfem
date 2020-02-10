@@ -111,6 +111,7 @@ int main(int argc, char *argv[])
    double kappa = -1.0;
    bool amg_elast = false;
    bool visualization = 1;
+   bool adios2 = false;
 
    OptionsParser args(argc, argv);
    args.AddOption(&mesh_file, "-m", "--mesh",
@@ -136,6 +137,10 @@ int main(int argc, char *argv[])
    args.AddOption(&visualization, "-vis", "--visualization", "-no-vis",
                   "--no-visualization",
                   "Enable or disable GLVis visualization.");
+   args.AddOption(&adios2, "-adios2", "--adios2-streams", "-no-adios2",
+                  "--no-adios2-streams",
+                  "Save data adios2 streams, files can use ParaView (paraview.org) VTX visualization.");
+
    args.Parse();
    if (!args.Good())
    {
@@ -317,31 +322,25 @@ int main(int argc, char *argv[])
       ofstream sol_ofs(sol_name.str().c_str());
       sol_ofs.precision(8);
       sol_ofs << x;
+   }
 
+   // 15. Optionally output a BP (binary pack file) ADIOS2DataCollection
+   //     ADIOS2: https://adios2.readthedocs.io
 #ifdef MFEM_USE_ADIOS2
-      int myid;
-      MPI_Comm_rank(MPI_COMM_WORLD, &myid);
-      if (myid == 0)
-      {
-         std::cout << "Using ADIOS2 BP output\n";
-      }
-      // set appropriate name for bp dataset
+   if (adios2)
+   {
       std::string postfix(mesh_file);
       postfix.erase(0, std::string("../data/").size() );
       postfix += "_o" + std::to_string(order);
+      const std::string collection_name = "ex17-p-" + postfix + ".bp";
 
-      // create adios2stream for output with arguments: name, mode, comm
-      // always use the bp or bp4 extension
-      adios2stream adios2output("ex17p_" + postfix + ".bp",
-                                adios2stream::openmode::out, MPI_COMM_WORLD);
-      // print the ParMesh
-      pmesh.Print(adios2output);
-      // save a (ParGridFunction) solution with a variable name
-      x.Save(adios2output, "sol");
-#endif
+      ADIOS2DataCollection adios2_dc(MPI_COMM_WORLD, collection_name, &pmesh);
+      adios2_dc.RegisterField("sol", &x);
+      adios2_dc.Save();
    }
+#endif
 
-   // 15. Visualization: send data by socket to a GLVis server.
+   // 16. Visualization: send data by socket to a GLVis server.
    if (visualization)
    {
       char vishost[] = "localhost";

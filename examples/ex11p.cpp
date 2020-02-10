@@ -71,6 +71,7 @@ int main(int argc, char *argv[])
    bool slu_solver  = false;
    bool sp_solver = false;
    bool visualization = 1;
+   bool adios2 = false;
 
    OptionsParser args(argc, argv);
    args.AddOption(&mesh_file, "-m", "--mesh",
@@ -97,6 +98,10 @@ int main(int argc, char *argv[])
    args.AddOption(&visualization, "-vis", "--visualization", "-no-vis",
                   "--no-visualization",
                   "Enable or disable GLVis visualization.");
+   args.AddOption(&adios2, "-adios2", "--adios2-streams", "-no-adios2",
+                  "--no-adios2-streams",
+                  "Save data adios2 streams, files can use ParaView (paraview.org) VTX visualization.");
+
    args.Parse();
    if (slu_solver && sp_solver)
    {
@@ -312,28 +317,31 @@ int main(int argc, char *argv[])
          x.Save(mode_ofs);
          mode_name.str("");
       }
+   }
 
+   // 11. Optionally output a BP (binary pack file)
+   //     ADIOS2: https://adios2.readthedocs.io
 #ifdef MFEM_USE_ADIOS2
-      if (myid == 0)
-      {
-         std::cout << "Using ADIOS2 BP output\n";
-      }
+   if (adios2)
+   {
       std::string postfix(mesh_file);
       postfix.erase(0, std::string("../data/").size() );
       postfix += "_o" + std::to_string(order);
 
-      adios2stream adios2output("ex11p_" + postfix + ".bp",
+      // using the adios2stream interface to support saving temporaries
+      adios2stream adios2output("ex11-p-" + postfix + ".bp",
                                 adios2stream::openmode::out, MPI_COMM_WORLD);
       pmesh->Print(adios2output);
       for (int i=0; i<nev; i++)
       {
          x = lobpcg->GetEigenvector(i);
+         // x is a temporary that must be saved immediately
          x.Save(adios2output, "mode_" + std::to_string(i));
       }
-#endif
    }
+#endif
 
-   // 11. Send the solution by socket to a GLVis server.
+   // 12. Send the solution by socket to a GLVis server.
    if (visualization)
    {
       char vishost[] = "localhost";
@@ -373,7 +381,7 @@ int main(int argc, char *argv[])
       mode_sock.close();
    }
 
-   // 12. Free the used memory.
+   // 13. Free the used memory.
    delete lobpcg;
    delete precond;
    delete M;

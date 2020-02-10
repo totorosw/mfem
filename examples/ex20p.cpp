@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
    double dt  = 0.1;
    bool visualization = true;
    bool gnuplot = false;
+   bool adios2 = false;
 
    OptionsParser args(argc, argv);
    args.AddOption(&order, "-o", "--order",
@@ -129,6 +130,10 @@ int main(int argc, char *argv[])
                   "Enable or disable GLVis visualization.");
    args.AddOption(&gnuplot, "-gp", "--gnuplot", "-no-gp", "--no-gnuplot",
                   "Enable or disable GnuPlot visualization.");
+   args.AddOption(&adios2, "-adios2", "--adios2-streams", "-no-adios2",
+                  "--no-adios2-streams",
+                  "Save data adios2 streams, files can use ParaView (paraview.org) VTX visualization.");
+
    args.Parse();
    if (!args.Good())
    {
@@ -314,26 +319,22 @@ int main(int argc, char *argv[])
            << "keys\n maac\n" << "axis_labels 'q' 'p' 't'\n"<< flush;
 
 #ifdef MFEM_USE_ADIOS2
-      if (myid == 0)
+      if (adios2)
       {
-         std::cout << "Using ADIOS2 BP output\n";
+
+         // set appropriate name for bp dataset
+         const std::string postfix = "o" + std::to_string(order);
+         const std::string collection_name = "ex20-p-" + postfix + ".bp";
+
+         ADIOS2DataCollection adios2_dc(MPI_COMM_WORLD, collection_name, &pmesh);
+         adios2_dc.SetParameter("SubStreams", std::to_string(num_procs/2) );
+         adios2_dc.SetParameter("FullData", "On");
+         adios2_dc.SetParameter("RefinedData", "Off");
+         adios2_dc.RegisterField("energy", &energy);
+         adios2_dc.Save();
       }
-      // set appropriate name for bp dataset
-      const std::string postfix = "o" + std::to_string(order);
-
-      // create adios2stream for output with arguments: name, mode, comm
-      // always use the bp or bp4 extension
-      adios2stream adios2output("ex20p_" + postfix + ".bp",
-                                adios2stream::openmode::out, MPI_COMM_WORLD);
-      adios2output.SetParameter("FullData", "On");
-      adios2output.SetParameter("RefinedData", "Off");
-      // print the ParMesh
-      pmesh.Print(adios2output);
-      // save a (ParGridFunction) solution with a variable name
-      energy.Save(adios2output, "energy");
-#endif
    }
-
+#endif
 
    MPI_Finalize();
 }

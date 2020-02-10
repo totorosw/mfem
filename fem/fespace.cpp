@@ -2126,11 +2126,6 @@ void FiniteElementSpace::Save(std::ostream &out) const
    }
 }
 
-void FiniteElementSpace::Save(adios2stream &out) const
-{
-   //TODO
-}
-
 FiniteElementCollection *FiniteElementSpace::Load(Mesh *m, std::istream &input)
 {
    string buff;

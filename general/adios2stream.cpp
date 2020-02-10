@@ -81,7 +81,7 @@ adios2::Attribute<T> SafeDefineAttribute(adios2::IO io,
 
 bool SetBoolParameter(const std::string key,
                       const std::map<std::string, std::string>& parameters,
-                      const bool default_value)
+                      const bool default_value) noexcept
 {
    auto it = parameters.find(key);
    if (it != parameters.end())
@@ -108,7 +108,7 @@ adios2stream::adios2stream(const std::string& name, const openmode mode,
                            MPI_Comm comm, const std::string engineType)
    : name(name),
      adios2_openmode(mode),
-     adios(std::make_shared<adios2::ADIOS>(comm)),
+     adios(new adios2::ADIOS(comm)),
      io(adios->DeclareIO(name))
 {
    io.SetEngine(engineType);
@@ -118,7 +118,7 @@ adios2stream::adios2stream(const std::string& name, const openmode mode,
                            const std::string engineType)
    : name(name),
      adios2_openmode(mode),
-     adios(std::make_shared<adios2::ADIOS>()),
+     adios(new adios2::ADIOS()),
      io(adios->DeclareIO(name))
 {
    io.SetEngine(engineType);
@@ -142,7 +142,7 @@ void adios2stream::SetParameters(
 }
 
 void adios2stream::SetParameter(const std::string key,
-                                const std::string value)
+                                const std::string value) noexcept
 {
    io.SetParameter(key, value);
    if (key == "RefinedData")
@@ -175,33 +175,23 @@ void adios2stream::EndStep()
    active_step = false;
 }
 
-void adios2stream::SetTime(const double time, const std::string& variable_name)
+void adios2stream::SetTime(const double time)
 {
-   if (variable_name.empty())
-   {
-      const std::string message =
-         "MFEM adios2stream error: variable_name can not be empty "
-         "in call to SetTime";
-      mfem_error(message.c_str());
-   }
-   if (!time_variable_name.empty() && time_variable_name != variable_name  )
-   {
-      const std::string message =
-         "MFEM adios2stream error: only one variable_name can be associated with time, "
-         + time_variable_name + " different from " + variable_name +
-         ", in call to SetTime";
-      mfem_error(message.c_str());
-   }
-
-   adios2::Variable<double> var_time = io.InquireVariable<double>(variable_name);
-   if (!var_time)
-   {
-      var_time = io.DefineVariable<double>(variable_name);
-   }
+   adios2::Variable<double> var_time = SafeDefineVariable<double>(io, "TIME");
    engine.Put(var_time, time);
-   time_variable_name = variable_name;
+   transient = true;
 }
 
+void adios2stream::SetCycle(const int cycle)
+{
+   adios2::Variable<int> var_cycle = SafeDefineVariable<int>(io,"CYCLE");
+   engine.Put(var_cycle, cycle);
+}
+
+void adios2stream::SetRefinementLevel(const int level) noexcept
+{
+   refinement_level = level;
+}
 
 size_t adios2stream::CurrentStep() const
 {
@@ -275,7 +265,7 @@ void adios2stream::Print(const Mesh& mesh, const mode print_mode)
 
       if (refine)
       {
-         for (int i = 0; i < mesh.GetNE(); i++)
+         for (int i = 0; i < mesh.GetNE(); ++i)
          {
             const Geometry::Type type = mesh.GetElementBaseGeometry(i);
             RefinedGeometry* refined_geometry = GlobGeometryRefiner.Refine(type,
@@ -337,33 +327,33 @@ void adios2stream::Print(const Mesh& mesh, const mode print_mode)
    auto lf_PrintRefinedMeshData = [this](Mesh& mesh)
    {
       // elements and vertices
-      engine.Put("NumOfElements", static_cast<uint32_t>(mesh.GetNE()));
+      engine.Put("NumOfElements", static_cast<uint32_t>(refined_mesh_nelements));
       engine.Put("NumOfVertices", static_cast<uint32_t>(refined_mesh_nvertices));
 
       const uint32_t vtkType =
          GLVISToVTKType(static_cast<int>(mesh.elements[0]->GetGeometryType()));
       engine.Put("types", vtkType);
 
-      DenseMatrix pmatrix;
       adios2::Variable<double> var_vertices = io.InquireVariable<double>("vertices");
       adios2::Variable<double>::Span span_vertices = engine.Put<double>(var_vertices);
-      size_t span_vertices_offset = 0;
 
       adios2::Variable<uint64_t> var_connectivity =
          io.InquireVariable<uint64_t>("connectivity");
       adios2::Variable<uint64_t>::Span span_connectivity = engine.Put<uint64_t>
                                                            (var_connectivity);
+      size_t span_vertices_offset = 0;
       size_t span_connectivity_offset = 0;
       // use for setting absolute node id for each element
       size_t point_id = 0;
+      DenseMatrix pmatrix;
 
-      for (int i = 0; i < mesh.GetNE(); i++)
+      for (int e = 0; e < mesh.GetNE(); ++e)
       {
-         const Geometry::Type type = mesh.GetElementBaseGeometry(i);
+         const Geometry::Type type = mesh.GetElementBaseGeometry(e);
          RefinedGeometry* refined_geometry = GlobGeometryRefiner.Refine(type,
                                                                         refinement_level, 1);
          // vertices
-         mesh.GetElementTransformation(i)->Transform(refined_geometry->RefPts, pmatrix);
+         mesh.GetElementTransformation(e)->Transform(refined_geometry->RefPts, pmatrix);
          for (int i = 0; i < pmatrix.Width(); ++i)
          {
             for (int j = 0; j < pmatrix.Height(); ++j)
@@ -374,18 +364,31 @@ void adios2stream::Print(const Mesh& mesh, const mode print_mode)
          span_vertices_offset += static_cast<size_t>(pmatrix.Width()*pmatrix.Height());
 
          // connectivity
+         const int nv = Geometries.GetVertices(type)->GetNPoints();
          const Array<int> &element_vertices = refined_geometry->RefGeoms;
-         span_connectivity[span_connectivity_offset] = static_cast<uint64_t>
-                                                       (element_vertices.Size());
-         for (int v = 0; v < element_vertices.Size(); ++v)
+
+         for (int v = 0; v < element_vertices.Size();)
          {
-            span_connectivity[span_connectivity_offset + 1 + v] = static_cast<uint64_t>
-                                                                  (point_id + element_vertices[v]);
+            span_connectivity[span_connectivity_offset] = static_cast<uint64_t>(nv);
+            ++span_connectivity_offset;
+
+            for (int k =0; k < nv; k++, v++ )
+            {
+               span_connectivity[span_connectivity_offset] = static_cast<uint64_t>
+                                                             (point_id + element_vertices[v]);
+               ++span_connectivity_offset;
+            }
          }
-         span_connectivity_offset += static_cast<size_t>(element_vertices.Size() + 1);
+
          point_id += static_cast<size_t>(refined_geometry->RefPts.GetNPoints());
       }
 
+      for (int e = 0; e < mesh.GetNE(); ++e)
+      {
+         const Geometry::Type type = mesh.GetElementBaseGeometry(e);
+         RefinedGeometry* refined_geometry = GlobGeometryRefiner.Refine(type,
+                                                                        refinement_level, 1);
+      }
    };
 
    auto lf_PrintMeshData = [&](Mesh& mesh)
@@ -637,14 +640,15 @@ int32_t adios2stream::GLVISToVTKType(
          vtkType = 5;
          break;
       case Geometry::Type::SQUARE:
-         vtkType = 8;
-         //vtkType = 9;
+         //vtkType = 8;
+         vtkType = 9;
          break;
       case Geometry::Type::TETRAHEDRON:
          vtkType = 10;
          break;
       case Geometry::Type::CUBE:
-         vtkType = 11;
+         //vtkType = 11;
+         vtkType = 12;
          break;
       case Geometry::Type::PRISM:
          vtkType = 13;
@@ -703,10 +707,10 @@ std::string adios2stream::VTKSchema() const noexcept
       }
    }
 
-   if (!time_variable_name.empty())
+   if (transient)
    {
       vtkSchema += "        <DataArray Name=\"TIME\">\n";
-      vtkSchema += "          " + time_variable_name + "\n";
+      vtkSchema += "          TIME\n";
       vtkSchema += "        </DataArray>\n";
    }
 

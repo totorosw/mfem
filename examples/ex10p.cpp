@@ -180,6 +180,7 @@ int main(int argc, char *argv[])
    double K = 5.0;
    bool visualization = true;
    int vis_steps = 1;
+   bool adios2 = false;
 
    OptionsParser args(argc, argv);
    args.AddOption(&mesh_file, "-m", "--mesh",
@@ -211,6 +212,10 @@ int main(int argc, char *argv[])
                   "Enable or disable GLVis visualization.");
    args.AddOption(&vis_steps, "-vs", "--visualization-steps",
                   "Visualize every n-th timestep.");
+   args.AddOption(&adios2, "-adios2", "--adios2-streams", "-no-adios2",
+                  "--no-adios2-streams",
+                  "Save data adios2 streams, files can use ParaView (paraview.org) VTX visualization.");
+
    args.Parse();
    if (!args.Good())
    {
@@ -350,19 +355,25 @@ int main(int argc, char *argv[])
          visualize(vis_w, pmesh, &x_gf, &w_gf, "Elastic energy density", true);
       }
    }
+
+   // 10. Optionally output a BP (binary pack file) ADIOS2DataCollection
+   //     ADIOS2: https://adios2.readthedocs.io
 #ifdef MFEM_USE_ADIOS2
-   if (myid == 0)
+   ADIOS2DataCollection* adios2_dc = NULL;
+
+   if (adios2)
    {
-      std::cout << "Using ADIOS2 BP output\n";
+      std::string postfix(mesh_file);
+      postfix.erase(0, std::string("../data/").size() );
+      postfix += "_solver" + std::to_string(ode_solver_type);
+      const std::string collection_name = "ex10-p-" + postfix + ".bp";
+
+      adios2_dc = new ADIOS2DataCollection(MPI_COMM_WORLD, collection_name, pmesh);
+      adios2_dc->SetParameter("SubStreams", std::to_string(num_procs/2) );
+      adios2_dc->RegisterField("velocity", &v_gf);
+      adios2_dc->RegisterField("elastic_energy", &w_gf);
    }
-   std::string postfix(mesh_file);
-   postfix.erase(0, std::string("../data/").size() );
-   postfix += "_solver" + std::to_string(ode_solver_type);
-
-   adios2stream adios2output("ex10p_" + postfix + ".bp",
-                             adios2stream::openmode::out, MPI_COMM_WORLD);
 #endif
-
 
    double ee0 = oper.ElasticEnergy(x_gf);
    double ke0 = oper.KineticEnergy(v_gf);
@@ -377,7 +388,7 @@ int main(int argc, char *argv[])
    oper.SetTime(t);
    ode_solver->Init(oper);
 
-   // 10. Perform time-integration
+   // 11. Perform time-integration
    //     (looping over the time iterations, ti, with a time-step dt).
    bool last_step = false;
    for (int ti = 1; !last_step; ti++)
@@ -410,35 +421,26 @@ int main(int argc, char *argv[])
                visualize(vis_w, pmesh, &x_gf, &w_gf);
             }
          }
+
 #ifdef MFEM_USE_ADIOS2
+         if (adios2)
          {
-            adios2output.BeginStep();
-
-            //reduce mesh footprint (step=0 only)
-            if (adios2output.CurrentStep() == 0)
-            {
-               pmesh->Print(adios2output);
-            }
-
-            // reduce time footprint (rank=0 only)
-            if (myid == 0)
-            {
-               adios2output.SetTime(t);
-            }
-
-            v_gf.Save(adios2output, "velocity");
-            w_gf.Save(adios2output, "elastic_energy");
-            adios2output.EndStep();
+            adios2_dc->SetTime(t);
+            adios2_dc->SetCycle(ti);
+            adios2_dc->Save();
          }
 #endif
       }
    }
 
 #ifdef MFEM_USE_ADIOS2
-   adios2output.Close();
+   if (adios2)
+   {
+      delete adios2_dc;
+   }
 #endif
 
-   // 11. Save the displaced mesh, the velocity and elastic energy.
+   // 12. Save the displaced mesh, the velocity and elastic energy.
    {
       v_gf.SetFromTrueVector(); x_gf.SetFromTrueVector();
       GridFunction *nodes = &x_gf;
@@ -463,7 +465,7 @@ int main(int argc, char *argv[])
       w_gf.Save(ee_ofs);
    }
 
-   // 12. Free the used memory.
+   // 13. Free the used memory.
    delete ode_solver;
    delete pmesh;
 
