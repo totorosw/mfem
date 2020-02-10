@@ -247,6 +247,15 @@ int main(int argc, char *argv[])
       visit_dc.SetTime(0.0);
       visit_dc.Save();
    }
+#ifdef MFEM_USE_ADIOS2
+   std::string postfix(mesh_file);
+   postfix.erase(0, std::string("../data/").size() );
+   postfix += "_o" + std::to_string(order);
+   postfix += "_solver" + std::to_string(ode_solver_type);
+
+   adios2stream adios2output("ex16p_" + postfix + ".bp",
+                             adios2stream::openmode::out, MPI_COMM_WORLD);
+#endif
 
    socketstream sout;
    if (visualization)
@@ -317,9 +326,28 @@ int main(int argc, char *argv[])
             visit_dc.SetTime(t);
             visit_dc.Save();
          }
+
+#ifdef MFEM_USE_ADIOS2
+         adios2output.BeginStep();
+         if (adios2output.CurrentStep() == 0)
+         {
+            pmesh->Print(adios2output);
+         }
+         // reduce time footprint (rank=0 only)
+         if (myid == 0)
+         {
+            adios2output.SetTime(t);
+         }
+         u_gf.Save(adios2output, "temperature");
+         adios2output.EndStep();
+#endif
       }
       oper.SetParameters(u);
    }
+
+#ifdef MFEM_USE_ADIOS2
+   adios2output.Close();
+#endif
 
    // 11. Save the final solution in parallel. This output can be viewed later
    //     using GLVis: "glvis -np <np> -m ex16-mesh -g ex16-final".
