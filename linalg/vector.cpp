@@ -15,9 +15,15 @@
 #include "dtensor.hpp"
 #include "../general/forall.hpp"
 
-#if defined(MFEM_USE_SUNDIALS) && defined(MFEM_USE_MPI)
+#if defined(MFEM_USE_SUNDIALS)
+#if defined(MFEM_USE_MPI)
+#include <nvector/nvector_mpiplusx.h>
 #include <nvector/nvector_parallel.h>
 #include <nvector/nvector_parhyp.h>
+#endif
+#if defined(MFEM_USE_CUDA)
+#include <nvector/nvector_cuda.h>
+#endif
 #endif
 
 #include <iostream>
@@ -1135,11 +1141,28 @@ vector_min_cpu:
 Vector::Vector(N_Vector nv)
 {
    N_Vector_ID nvid = N_VGetVectorID(nv);
+
+#ifdef MFEM_USE_MPI
+   if (nvid == SUNDIALS_NVEC_MPIPLUSX)
+   {
+      nvid = N_VGetVectorID(N_VGetLocalVector_MPIPlusX(nv));
+   }
+#endif
+
    switch (nvid)
    {
       case SUNDIALS_NVEC_SERIAL:
          SetDataAndSize(NV_DATA_S(nv), NV_LENGTH_S(nv));
          break;
+#ifdef MFEM_USE_CUDA
+      case SUNDIALS_NVEC_CUDA:
+         if (!N_VIsManaged_Cuda(nv))
+         {
+            N_VCopyFromDevice_Cuda(nv); // ensure host and device are in sync
+         }
+         SetDataAndSize(N_VGetHostArrayPointer_Cuda(nv), N_VGetLength_Cuda(nv));
+         break;
+#endif
 #ifdef MFEM_USE_MPI
       case SUNDIALS_NVEC_PARALLEL:
          SetDataAndSize(NV_DATA_P(nv), NV_LOCLENGTH_P(nv));
@@ -1160,6 +1183,14 @@ void Vector::ToNVector(N_Vector &nv)
 {
    MFEM_ASSERT(nv, "N_Vector handle is NULL");
    N_Vector_ID nvid = N_VGetVectorID(nv);
+
+#ifdef MFEM_USE_MPI
+   if (nvid == SUNDIALS_NVEC_MPIPLUSX)
+   {
+      nvid = N_VGetVectorID(N_VGetLocalVector_MPIPlusX(nv));
+   }
+#endif
+
    switch (nvid)
    {
       case SUNDIALS_NVEC_SERIAL:
@@ -1167,6 +1198,25 @@ void Vector::ToNVector(N_Vector &nv)
          NV_DATA_S(nv) = data;
          NV_LENGTH_S(nv) = size;
          break;
+#ifdef MFEM_USE_CUDA
+      case SUNDIALS_NVEC_CUDA:
+         MFEM_ASSERT(N_VOwnData_Cuda(nv) == SUNFALSE, "invalid cuda N_Vector");
+         if (data.GetMemoryType() == MemoryType::CUDA)
+         {
+            N_VSetHostArrayPointer_Cuda(nv, data.HostReadWrite());
+            N_VSetDeviceArrayPointer_Cuda(nv, data.ReadWrite());
+            N_VResize_Cuda(nv, size);
+         }
+         else if (data.GetMemoryType() == MemoryType::CUDA_UVM)
+         {
+            N_VSetManagedArrayPointer_Cuda(nv, data);
+         }
+         else
+         {
+            MFEM_ABORT("invalid memory type for cuda N_Vector");
+         }
+         break;
+#endif
 #ifdef MFEM_USE_MPI
       case SUNDIALS_NVEC_PARALLEL:
          MFEM_ASSERT(NV_OWN_DATA_P(nv) == SUNFALSE, "invalid parallel N_Vector");

@@ -45,21 +45,22 @@ namespace mfem
 class SundialsSolver
 {
 protected:
-   void *sundials_mem;     ///< SUNDIALS mem structure.
-   mutable int flag;       ///< Last flag returned from a call to SUNDIALS.
-   bool reinit;            ///< Flag to signal memory reinitialization is need.
-   long saved_global_size; ///< Global vector length on last initialization.
+   void *sundials_mem;        ///< SUNDIALS mem structure.
+   mutable int flag;          ///< Last flag returned from a call to SUNDIALS.
+   bool reinit;               ///< Flag to signal memory reinitialization is need.
+   long saved_global_size;    ///< Global vector length on last initialization.
 
-   N_Vector           y;   ///< State vector.
-   SUNMatrix          A;   ///< Linear system A = I - gamma J, M - gamma J, or J.
-   SUNMatrix          M;   ///< Mass matrix M.
-   SUNLinearSolver    LSA; ///< Linear solver for A.
-   SUNLinearSolver    LSM; ///< Linear solver for M.
-   SUNNonlinearSolver NLS; ///< Nonlinear solver.
+   N_Vector           y;      ///< State vector.
+   N_Vector           y_loc;  ///< Local state vector, NULL if y is not MPIPlusX.
+   SUNMatrix          A;      ///< Linear system A = I - gamma J, M - gamma J, or J.
+   SUNMatrix          M;      ///< Mass matrix M.
+   SUNLinearSolver    LSA;    ///< Linear solver for A.
+   SUNLinearSolver    LSM;    ///< Linear solver for M.
+   SUNNonlinearSolver NLS;    ///< Nonlinear solver.
 
 #ifdef MFEM_USE_MPI
    bool Parallel() const
-   { return (N_VGetVectorID(y) != SUNDIALS_NVEC_SERIAL); }
+   { return (N_VGetVectorID(y) != SUNDIALS_NVEC_SERIAL) || (N_VGetVectorID(y) != SUNDIALS_NVEC_CUDA); }
 #else
    bool Parallel() const { return false; }
 #endif
@@ -72,7 +73,7 @@ protected:
    /** @brief Protected constructor: objects of this type should be constructed
        only as part of a derived class. */
    SundialsSolver() : sundials_mem(NULL), flag(0), reinit(false),
-      saved_global_size(0), y(NULL), A(NULL), M(NULL),
+      saved_global_size(0), y(NULL), y_loc(NULL), A(NULL), M(NULL),
       LSA(NULL), LSM(NULL), NLS(NULL) { }
 
 public:

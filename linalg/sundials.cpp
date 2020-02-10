@@ -20,7 +20,11 @@
 
 // SUNDIALS vectors
 #include <nvector/nvector_serial.h>
+#ifdef MFEM_USE_CUDA
+#include <nvector/nvector_cuda.h>
+#endif
 #ifdef MFEM_USE_MPI
+#include <nvector/nvector_mpiplusx.h>
 #include <nvector/nvector_parallel.h>
 #endif
 
@@ -120,9 +124,15 @@ int CVODESolver::LinSysSolve(SUNLinearSolver LS, SUNMatrix A, N_Vector x,
 CVODESolver::CVODESolver(int lmm)
    : lmm_type(lmm), step_mode(CV_NORMAL)
 {
-   // Allocate an empty serial N_Vector
-   y = N_VNewEmpty_Serial(0);
-   MFEM_VERIFY(y, "error in N_VNewEmpty_Serial()");
+#ifdef MFEM_USE_CUDA
+      // Allocate an empty cuda N_Vector
+      y = N_VNewEmpty_Cuda();
+      MFEM_VERIFY(y, "error in N_VNewEmpty_Cuda()");
+#else
+      // Allocate an empty serial N_Vector
+      y = N_VNewEmpty_Serial(0);
+      MFEM_VERIFY(y, "error in N_VNewEmpty_Serial()");
+#endif
 }
 
 #ifdef MFEM_USE_MPI
@@ -131,19 +141,29 @@ CVODESolver::CVODESolver(MPI_Comm comm, int lmm)
 {
    if (comm == MPI_COMM_NULL)
    {
-
+#ifdef MFEM_USE_CUDA
+      // Allocate an empty cuda N_Vector
+      y = N_VNewEmpty_Cuda();
+      MFEM_VERIFY(y, "error in N_VNewEmpty_Cuda()");
+#else
       // Allocate an empty serial N_Vector
       y = N_VNewEmpty_Serial(0);
       MFEM_VERIFY(y, "error in N_VNewEmpty_Serial()");
-
+#endif
    }
    else
    {
-
+#ifdef MFEM_USE_CUDA
+      // Allocate an empty MPIPlusX N_Vector with CUDA underneath
+      y_loc = N_VNewEmpty_Cuda()
+      MFEM_VERIFY(y_loc, "error in N_VNewEmpty_Cuda()");
+      y = N_VMake_MPIPlusX(comm, y_loc);
+      MFEM_VERIFY(y, "error in N_VMake_MPIPlusX()");
+#else
       // Allocate an empty parallel N_Vector
       y = N_VNewEmpty_Parallel(comm, 0, 0);  // calls MPI_Allreduce()
       MFEM_VERIFY(y, "error in N_VNewEmpty_Parallel()");
-
+#endif
    }
 }
 #endif
@@ -163,7 +183,7 @@ void CVODESolver::Init(TimeDependentOperator &f_)
    {
 #ifdef MFEM_USE_MPI
       MPI_Allreduce(&local_size, &global_size, 1, MPI_LONG, MPI_SUM,
-                    NV_COMM_P(y));
+                    *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
 #endif
    }
 
@@ -183,7 +203,8 @@ void CVODESolver::Init(TimeDependentOperator &f_)
 #ifdef MFEM_USE_MPI
          int l_resize = (NV_LOCLENGTH_P(y) != local_size) ||
                         (saved_global_size != global_size);
-         MPI_Allreduce(&l_resize, &resize, 1, MPI_INT, MPI_LOR, NV_COMM_P(y));
+         MPI_Allreduce(&l_resize, &resize, 1, MPI_INT, MPI_LOR,
+                       *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
 #endif
       }
 
@@ -202,16 +223,34 @@ void CVODESolver::Init(TimeDependentOperator &f_)
       // called.
       if (!Parallel())
       {
+#ifdef MFEM_USE_CUDA
+         double *device;
+         CuMemAlloc(static_cast<void**>(&device), sizeof(double)*local_size));
+         N_VSetDeviceArrayPointer_Cuda(y, device);
+         N_VSetHostArrayPointer_Cuda(y, new double[local_size]());
+         N_VResize_Cuda(y, local_size);
+#else
          NV_LENGTH_S(y) = local_size;
          NV_DATA_S(y)   = new double[local_size](); // value-initialize
+#endif
       }
       else
       {
 #ifdef MFEM_USE_MPI
+#ifdef MFEM_USE_CUDA
+         double *device;
+         CuMemAlloc(static_cast<void**>(&device), sizeof(double)*local_size));
+         N_VSetDeviceArrayPointer_Cuda(y_loc, device);
+         N_VSetHostArrayPointer_Cuda(y_loc, new double[local_size]());
+         N_VResize_Cuda(y_loc, local_size);
+         N_VResize_MPIPlusX(y, global_size);
+         saved_global_size = global_size;
+#else
          NV_LOCLENGTH_P(y)  = local_size;
          NV_GLOBLENGTH_P(y) = global_size;
          saved_global_size  = global_size;
          NV_DATA_P(y)       = new double[local_size](); // value-initialize
+#endif
 #endif
       }
 
@@ -237,12 +276,29 @@ void CVODESolver::Init(TimeDependentOperator &f_)
       // Delete the allocated data in y.
       if (!Parallel())
       {
+#ifdef MFEM_USE_CUDA
+         double *host = N_VGetHostArrayPointer_Cuda(y);
+         delete [] host;
+         double *device = N_VGetDeviceArrayPointer_Cuda(y);
+         CuMemFree(static_cast<void*>(device));
+         N_VSetHostArrayPointer_Cuda(y, NULL);
+         N_VSetDeviceArrayPointer_Cuda(y, NULL);
+#else
          delete [] NV_DATA_S(y);
          NV_DATA_S(y) = NULL;
+#endif
       }
       else
       {
 #ifdef MFEM_USE_MPI
+#ifdef MFEM_USE_CUDA
+         double *host = N_VGetHostArrayPointer_Cuda(y_loc);
+         delete [] host;
+         double *device = N_VGetDeviceArrayPointer_Cuda(y_loc);
+         CuMemFree(static_cast<void*>(device));
+         N_VSetHostArrayPointer_Cuda(y_loc, NULL);
+         N_VSetDeviceArrayPointer_Cuda(y_loc, NULL);
+#else
          delete [] NV_DATA_P(y);
          NV_DATA_P(y) = NULL;
 #endif
@@ -257,12 +313,37 @@ void CVODESolver::Step(Vector &x, double &t, double &dt)
 {
    if (!Parallel())
    {
+#ifdef MFEM_USE_CUDA
+      if (x.GetMemory.GetMemoryType() == MemoryType.CUDA_UVM)
+      {
+         N_VSetManagedArrayPointer_Cuda(y, x.data.HostReadWrite());
+      }
+      else
+      {
+         N_VSetHostArrayPointer_Cuda(y, x.data.HostReadWrite());
+         N_VSetDeviceArrayPointer_Cuda(y, x.data.ReadWrite());
+      }
+      MFEM_VERIFY(N_VGetLength_Cuda(y) == x.Size(), "");
+#else
       NV_DATA_S(y) = x.GetData();
       MFEM_VERIFY(NV_LENGTH_S(y) == x.Size(), "");
+#endif
    }
    else
    {
 #ifdef MFEM_USE_MPI
+#ifdef MFEM_USE_CUDA
+      if (x.GetMemory.GetMemoryType() == MemoryType.CUDA_UVM)
+      {
+         N_VSetManagedArrayPointer_Cuda(y_loc, x.data.HostReadWrite());
+      }
+      else
+      {
+         N_VSetHostArrayPointer_Cuda(y_loc, x.data.HostReadWrite());
+         N_VSetDeviceArrayPointer_Cuda(y_loc x.data.ReadWrite());
+      }
+      MFEM_VERIFY(N_VGetLength_Cuda(y_loc) == x.Size(), "");
+#else
       NV_DATA_P(y) = x.GetData();
       MFEM_VERIFY(NV_LOCLENGTH_P(y) == x.Size(), "");
 #endif
@@ -404,6 +485,10 @@ void CVODESolver::PrintInfo() const
 
 CVODESolver::~CVODESolver()
 {
+   if (y_loc)
+   {
+      N_VDestroy(y_loc);
+   }
    N_VDestroy(y);
    SUNMatDestroy(A);
    SUNLinSolFree(LSA);
@@ -554,9 +639,15 @@ ARKStepSolver::ARKStepSolver(MPI_Comm comm, Type type)
    else
    {
 
+#ifdef MFEM_USE_CUDA
+      // Allocate an MPIPlusX N_Vector and with a CUDA N_Vector underneath it
+      y = N_VMake_MPIPlusX(comm, N_VMake_Cuda(0, NULL, NULL));  // calls MPI_Allreduce()
+      MFEM_VERIFY(y, "error in N_VMake_MPIPlusX()");
+#else
       // Allocate an empty parallel N_Vector
       y = N_VNewEmpty_Parallel(comm, 0, 0);  // calls MPI_Allreduce()
       MFEM_VERIFY(y, "error in N_VNewEmpty_Parallel()");
+#endif
 
    }
 }
@@ -577,7 +668,7 @@ void ARKStepSolver::Init(TimeDependentOperator &f_)
    {
 #ifdef MFEM_USE_MPI
       MPI_Allreduce(&local_size, &global_size, 1, MPI_LONG, MPI_SUM,
-                    NV_COMM_P(y));
+                    *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
 #endif
    }
 
@@ -597,7 +688,8 @@ void ARKStepSolver::Init(TimeDependentOperator &f_)
 #ifdef MFEM_USE_MPI
          int l_resize = (NV_LOCLENGTH_P(y) != local_size) ||
                         (saved_global_size != global_size);
-         MPI_Allreduce(&l_resize, &resize, 1, MPI_INT, MPI_LOR, NV_COMM_P(y));
+         MPI_Allreduce(&l_resize, &resize, 1, MPI_INT, MPI_LOR,
+                       *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
 #endif
       }
 
@@ -623,10 +715,16 @@ void ARKStepSolver::Init(TimeDependentOperator &f_)
       else
       {
 #ifdef MFEM_USE_MPI
+#ifdef MFEM_USE_CUDA
+         N_VSetArrayPointer_MPIPlusX(new double[local_size](), y); // value-initialize
+         N_VResize_MPIPlusX(y, local_size);
+         saved_global_size  = global_size;
+#else
          NV_LOCLENGTH_P(y)  = local_size;
          NV_GLOBLENGTH_P(y) = global_size;
          saved_global_size  = global_size;
          NV_DATA_P(y)       = new double[local_size](); // value-initialize
+#endif
 #endif
       }
 
@@ -666,8 +764,14 @@ void ARKStepSolver::Init(TimeDependentOperator &f_)
       else
       {
 #ifdef MFEM_USE_MPI
+#ifdef MFEM_USE_CUDA
+         double *y_data = N_VGetArrayPointer_MPIPlusX(y);
+         delete [] y_data;
+         N_VSetArrayPointer_MPIPlusX(NULL, y);
+#else
          delete [] NV_DATA_P(y);
          NV_DATA_P(y) = NULL;
+#endif
 #endif
       }
    }
@@ -686,8 +790,16 @@ void ARKStepSolver::Step(Vector &x, double &t, double &dt)
    else
    {
 #ifdef MFEM_USE_MPI
+#ifdef MFEM_USE_CUDA
+      N_Vector* x_loc = N_VGetLocalVector_MPIPlusX(x);
+      N_VSetHostArrayPointer_Cuda(x_loc, x.GetMemory().ReadWrite(MemoryClass.HOST, x.Size()));
+      if (x.GetMemory.GetMemoryType() == MemoryType.CUDA)
+         N_VSetDeviceArrayPointer_Cuda(x_loc, x.GetMemory().ReadWrite(MemoryClass.CUDA, x.Size()));
+      MFEM_VERIFY(N_VGetLength_Cuda(x_loc) == x.Size(), "");
+#else
       NV_DATA_P(y) = x.GetData();
       MFEM_VERIFY(NV_LOCLENGTH_P(y) == x.Size(), "");
+#endif
 #endif
    }
 
@@ -1065,7 +1177,7 @@ void KINSolver::SetOperator(const Operator &op)
    {
 #ifdef MFEM_USE_MPI
       MPI_Allreduce(&local_size, &global_size, 1, MPI_LONG, MPI_SUM,
-                    NV_COMM_P(y));
+                    *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
 #endif
    }
 
@@ -1082,7 +1194,8 @@ void KINSolver::SetOperator(const Operator &op)
 #ifdef MFEM_USE_MPI
          int l_resize = (NV_LOCLENGTH_P(y) != local_size) ||
                         (saved_global_size != global_size);
-         MPI_Allreduce(&l_resize, &resize, 1, MPI_INT, MPI_LOR, NV_COMM_P(y));
+         MPI_Allreduce(&l_resize, &resize, 1, MPI_INT, MPI_LOR,
+                       *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
 #endif
       }
 
@@ -1263,7 +1376,8 @@ void KINSolver::Mult(const Vector &b, Vector &x) const
       if (Parallel())
       {
          double lnorm = norm;
-         MPI_Allreduce(&lnorm, &norm, 1, MPI_DOUBLE, MPI_MAX, NV_COMM_P(y));
+         MPI_Allreduce(&lnorm, &norm, 1, MPI_DOUBLE, MPI_MAX,
+                       *static_cast<MPI_Comm*>(N_VGetCommunicator(y)));
       }
 #endif
       if (abs_tol > rel_tol * norm)
