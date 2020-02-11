@@ -844,8 +844,11 @@ public:
 class KernelFECollection : public FiniteElementCollection
 {
 private:
-   const KernelFiniteElement *FE;
-
+   int maxDim;
+   ScalarFiniteElement *Tr_Elements[Geometry::NumGeom];
+   ScalarFiniteElement *L2_Elements[Geometry::NumGeom];
+   int *SegDofOrd[2]; // for rotating segment dofs in 1D
+   int *OtherDofOrd; 
    bool ValidGeomType(int GeomType) const;
    
 public:
@@ -854,11 +857,15 @@ public:
                       const double h,
                       const int rbfType,
                       const int distType,
-                      const int order = -1);
-   virtual ~KernelFECollection() { delete FE; }
+                      const int order = -1,
+                      const int mapType = FiniteElement::VALUE);
+   virtual ~KernelFECollection();
    
    virtual const FiniteElement *
    FiniteElementForGeometry(int GeomType) const;
+
+   virtual const FiniteElement *
+   TraceFiniteElementForGeometry(int GeomType) const;
 
    virtual int DofForGeometry(int GeomType) const;
 
