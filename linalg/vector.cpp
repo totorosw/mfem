@@ -1156,7 +1156,7 @@ Vector::Vector(N_Vector nv)
          break;
 #ifdef MFEM_USE_CUDA
       case SUNDIALS_NVEC_CUDA:
-         if (!N_VIsManaged_Cuda(nv))
+         if (!N_VIsManagedMemory_Cuda(nv))
          {
             N_VCopyFromDevice_Cuda(nv); // ensure host and device are in sync
          }
@@ -1200,16 +1200,17 @@ void Vector::ToNVector(N_Vector &nv)
          break;
 #ifdef MFEM_USE_CUDA
       case SUNDIALS_NVEC_CUDA:
-         MFEM_ASSERT(N_VOwnData_Cuda(nv) == SUNFALSE, "invalid cuda N_Vector");
+         MFEM_ABORT("SUNDIALS_NVEC_CUDA");
+         //MFEM_ASSERT(N_VOwnData_Cuda(nv) == SUNFALSE, "invalid cuda N_Vector");
          if (data.GetMemoryType() == MemoryType::CUDA)
          {
-            N_VSetHostArrayPointer_Cuda(nv, data.HostReadWrite());
-            N_VSetDeviceArrayPointer_Cuda(nv, data.ReadWrite());
-            N_VResize_Cuda(nv, size);
+            //N_VSetHostArrayPointer_Cuda(nv, data.HostReadWrite());
+            //N_VSetDeviceArrayPointer_Cuda(nv, data.ReadWrite());
+            //N_VResize_Cuda(nv, size);
          }
          else if (data.GetMemoryType() == MemoryType::CUDA_UVM)
          {
-            N_VSetManagedArrayPointer_Cuda(nv, data);
+            //N_VSetManagedArrayPointer_Cuda(nv, data);
          }
          else
          {
