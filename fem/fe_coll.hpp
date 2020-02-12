@@ -845,6 +845,7 @@ class KernelFECollection : public FiniteElementCollection
 {
 private:
    int maxDim;
+   char d_name[32];
    ScalarFiniteElement *Tr_Elements[Geometry::NumGeom];
    ScalarFiniteElement *L2_Elements[Geometry::NumGeom];
    int *SegDofOrd[2]; // for rotating segment dofs in 1D
@@ -871,7 +872,7 @@ public:
 
    virtual int * DofOrderForOrientation(int GeomType, int Or) const;
 
-   virtual const char * Name() const { return "Kernel"; }
+   virtual const char * Name() const { return d_name; }
 };
 
 } // namespace mfem
