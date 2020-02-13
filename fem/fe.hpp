@@ -2633,11 +2633,14 @@ class RBFFunction
 public:
    RBFFunction() { };
    virtual ~RBFFunction() { }
-   
-   // Base RBF functions
+
+   // The r is a normalized distance
    virtual double BaseFunction(double r) const = 0;
    virtual double BaseDerivative(double r) const = 0;
    virtual double BaseDerivative2(double r) const = 0;
+
+   // The support radius, outside of which the function is zero
+   virtual double Radius() const { return 1.e10; }
 };
 
 class GaussianRBF : public RBFFunction
@@ -2649,7 +2652,6 @@ public:
    virtual double BaseFunction(double r) const;
    virtual double BaseDerivative(double r) const;
    virtual double BaseDerivative2(double r) const;
-   
 };
 
 class MultiquadricRBF : public RBFFunction
@@ -2661,7 +2663,6 @@ public:
    virtual double BaseFunction(double r) const;
    virtual double BaseDerivative(double r) const;
    virtual double BaseDerivative2(double r) const;
-   
 };
 
 class InvMultiquadricRBF : public RBFFunction
@@ -2673,7 +2674,21 @@ public:
    virtual double BaseFunction(double r) const;
    virtual double BaseDerivative(double r) const;
    virtual double BaseDerivative2(double r) const;
+};
+
+class Wendland31RBF : public RBFFunction
+{
+   static const double radius;
    
+public:
+   Wendland31RBF() { };
+   virtual ~Wendland31RBF() { }
+   
+   virtual double BaseFunction(double r) const;
+   virtual double BaseDerivative(double r) const;
+   virtual double BaseDerivative2(double r) const;
+
+   virtual double Radius() const { return radius; }
 };
 
 // Choose the type of RBF to use
@@ -2685,7 +2700,8 @@ public:
       Gaussian = 0,
       Multiquadric = 1,
       InvMultiquadric = 2,
-      NumRBFTypes = 3
+      Wendland31 = 3,
+      NumRBFTypes = 4
    };
 
    // Return the requested RBF
@@ -2699,6 +2715,8 @@ public:
          return new MultiquadricRBF();
       case RBFType::InvMultiquadric:
          return new InvMultiquadricRBF();
+      case RBFType::Wendland31:
+         return new Wendland31RBF();
       }
       MFEM_ABORT("unknown RBF type");
       return NULL;
@@ -2715,7 +2733,7 @@ public:
    // Convert rbf int to identifier
    static char GetChar(const int rbfType)
    {
-      static const char ident[] = { 'G', 'M', 'I' };
+      static const char ident[] = { 'G', 'M', 'I', 'W' };
       return ident[Check(rbfType)];
    }
    
@@ -2727,8 +2745,9 @@ public:
       case 'G': return Gaussian;
       case 'M': return Multiquadric;
       case 'I': return InvMultiquadric;
+      case 'W': return Wendland31;
       }
-      MFEM_ABORT("unknown RBF identifier");
+      MFEM_ABORT("unknown RBF identifier: " << rbfIdent);
       return -1;
    }
 };
