@@ -23,11 +23,7 @@
 // Device sample runs:
 //               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d cuda
 //               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d raja-cuda
-//               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d occa-cuda
 //               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d raja-omp
-//               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d occa-omp
-//               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d ceed-cpu
-//               mpirun -np 4 ex3p -m ../data/star.mesh -pa -d ceed-cuda
 //               mpirun -np 4 ex3p -m ../data/beam-hex.mesh -pa -d cuda
 //
 // Description:  This example code solves a simple electromagnetic diffusion
@@ -212,12 +208,9 @@ int main(int argc, char *argv[])
    //     preconditioner from hypre, in the full assembly case.
    //     With partial assembly, use no preconditioner, for now.
 
-   if (pa)
+   if (pa) // Jacobi preconditioning in partial assembly mode
    {
-      Vector tdiag_pa(fespace->GetTrueVSize());
-      a->AssembleDiagonal(tdiag_pa);
-
-      OperatorJacobiSmoother Jacobi(tdiag_pa, ess_tdof_list, 1.0);
+      OperatorJacobiSmoother Jacobi(*a, ess_tdof_list);
 
       CGSolver cg(MPI_COMM_WORLD);
       cg.SetRelTol(1e-12);
@@ -229,6 +222,12 @@ int main(int argc, char *argv[])
    }
    else
    {
+      if (myid == 0)
+      {
+         cout << "Size of linear system: "
+              << A.As<HypreParMatrix>()->GetGlobalNumRows() << endl;
+      }
+
       ParFiniteElementSpace *prec_fespace =
          (a->StaticCondensationIsEnabled() ? a->SCParFESpace() : fespace);
       HypreAMS ams(*A.As<HypreParMatrix>(), prec_fespace);

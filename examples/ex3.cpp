@@ -23,11 +23,7 @@
 // Device sample runs:
 //               ex3 -m ../data/star.mesh -pa -d cuda
 //               ex3 -m ../data/star.mesh -pa -d raja-cuda
-//               ex3 -m ../data/star.mesh -pa -d occa-cuda
 //               ex3 -m ../data/star.mesh -pa -d raja-omp
-//               ex3 -m ../data/star.mesh -pa -d occa-omp
-//               ex3 -m ../data/star.mesh -pa -d ceed-cpu
-//               ex3 -m ../data/star.mesh -pa -d ceed-cuda
 //               ex3 -m ../data/beam-hex.mesh -pa -d cuda
 //
 // Description:  This example code solves a simple electromagnetic diffusion
@@ -180,13 +176,9 @@ int main(int argc, char *argv[])
    cout << "Size of linear system: " << A->Height() << endl;
 
    // 11. Solve the linear system A X = B.
-   if (pa)
+   if (pa) // Jacobi preconditioning in partial assembly mode
    {
-      // Jacobi preconditioning in partial assembly mode
-      Vector tdiag_pa(fespace->GetTrueVSize());
-      a->AssembleDiagonal(tdiag_pa);
-
-      OperatorJacobiSmoother M(tdiag_pa, ess_tdof_list, 1.0);
+      OperatorJacobiSmoother M(*a, ess_tdof_list);
       PCG(*A, M, B, X, 1, 1000, 1e-12, 0.0);
    }
    else
