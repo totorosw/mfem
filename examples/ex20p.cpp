@@ -292,7 +292,7 @@ int main(int argc, char *argv[])
       }
    }
 
-   // 10. Finalize the GLVis output
+   // 10. Finalize the GLVis output or optionally add ADIOS2 output
    if (visualization)
    {
       mesh.FinalizeQuadMesh(1);
@@ -321,8 +321,6 @@ int main(int argc, char *argv[])
 #ifdef MFEM_USE_ADIOS2
       if (adios2)
       {
-
-         // set appropriate name for bp dataset
          const std::string postfix = "o" + std::to_string(order);
          const std::string collection_name = "ex20-p-" + postfix + ".bp";
 
@@ -333,8 +331,8 @@ int main(int argc, char *argv[])
          adios2_dc.RegisterField("energy", &energy);
          adios2_dc.Save();
       }
-   }
 #endif
+   }
 
    MPI_Finalize();
 }

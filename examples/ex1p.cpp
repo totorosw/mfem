@@ -268,6 +268,7 @@ int main(int argc, char *argv[])
 
    // 17. Optionally output a BP (binary pack file) ADIOS2DataCollection
    //     ADIOS2: https://adios2.readthedocs.io
+#ifdef MFEM_USE_ADIOS2
    if (adios2)
    {
       std::string postfix(mesh_file);
@@ -289,6 +290,7 @@ int main(int argc, char *argv[])
       adios2_dc.RegisterField("sol", &x);
       adios2_dc.Save();
    }
+#endif
 
    // 18. Free the used memory.
    delete a;
