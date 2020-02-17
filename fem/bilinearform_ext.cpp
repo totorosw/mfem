@@ -99,9 +99,9 @@ void PABilinearFormExtension::Update()
    testFes = fes;
 
    const Operator* elem_restrict =
-           trialFes->GetElementRestriction(UsesTensorBasis(*a->FESpace())?
-                                           ElementDofOrdering::LEXICOGRAPHIC :
-                                           ElementDofOrdering::NATIVE);
+      trialFes->GetElementRestriction(UsesTensorBasis(*a->FESpace())?
+                                      ElementDofOrdering::LEXICOGRAPHIC :
+                                      ElementDofOrdering::NATIVE);
 
    elem_restrict_lex = dynamic_cast<const ElementRestriction*>(elem_restrict);
 
