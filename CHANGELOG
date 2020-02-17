@@ -100,6 +100,8 @@ Discretization improvements
 - Extended the support for partial assembly to vector mass and vector diffusion
   bilinear integrators.
 
+- Added second order derivatives of NURBS shape functions.
+
 - Added initial support for NonlinearForms to support the partial assembly mode.
 
 - Added a nonlinear vector valued convection integrator (Q u \cdot grad u, v)
