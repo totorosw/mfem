@@ -118,7 +118,7 @@ protected:
    // ADDED //
    void GetGhostFaceTransformation(FaceElementTransformations* FETr, 
                                    IsoparametricTransformation &FaceTransformation,
-                                   int face_type, int face_geom);
+                                   Element::Type face_type, Geometry::Type face_geom);
    // ADDED //
 
    /// Update the groups after triangle refinement
