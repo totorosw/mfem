@@ -72,6 +72,14 @@ protected:
    Table group_stria;  // contains shared triangle indices
    Table group_squad;  // contains shared quadrilateral indices
 
+   // ADDED //
+   Array<int> shared_face_to_global_face;
+   Array<int> shared_face_to_MPI_rank;
+   Array<int> vert_local_to_global;
+   int elem_local_to_global;
+   Table group_sface; // in 3D, union of group_stria and group_squad
+   // ADDED //
+
    /// Shared to local index mapping.
    Array<int> svert_lvert;
    Array<int> sedge_ledge;
@@ -106,6 +114,12 @@ protected:
    ElementTransformation* GetGhostFaceTransformation(
       FaceElementTransformations* FETr, Element::Type face_type,
       Geometry::Type face_geom);
+
+   // ADDED //
+   void GetGhostFaceTransformation(FaceElementTransformations* FETr, 
+                                   IsoparametricTransformation &FaceTransformation,
+                                   int face_type, int face_geom);
+   // ADDED //
 
    /// Update the groups after triangle refinement
    void RefineGroups(const DSTable &v_to_v, int *middle);
@@ -244,6 +258,20 @@ public:
 
    int GetNGroups() const { return gtopo.NGroups(); }
 
+   // ADDED //
+   Table const *GetSharedFacesInGroups() 
+   { 
+       if (Dim == 3) 
+       {
+           return &group_sface; 
+       } 
+       else
+       {
+           return &group_sedge; 
+       }
+   }
+   // ADDED //
+
    ///@{ @name These methods require group > 0
    int GroupNVertices(int group) { return group_svert.RowSize(group-1); }
    int GroupNEdges(int group)    { return group_sedge.RowSize(group-1); }
@@ -276,6 +304,14 @@ public:
        elements, respectively. */
    FaceElementTransformations *
    GetSharedFaceTransformations(int sf, bool fill2 = true);
+
+   // ADDED //
+   void GetSharedFaceTransformations(int sf, 
+                                     FaceElementTransformations &FaceElemTr,
+                                     IsoparametricTransformation &Transformation, 
+                                     IsoparametricTransformation &Transformation2,
+                                     IsoparametricTransformation &FTr);
+   // ADDED //
 
    /// Return the number of shared faces (3D), edges (2D), vertices (1D)
    int GetNSharedFaces() const;
