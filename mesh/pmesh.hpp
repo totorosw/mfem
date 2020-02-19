@@ -319,7 +319,7 @@ public:
    GetSharedFaceTransformations(int sf, bool fill2 = true);
 
    // ADDED //
-   void GetSharedFaceTransformations(int sf, 
+   FaceElementTransformations * GetSharedFaceTransformations(int sf, 
                                      FaceElementTransformations &FaceElemTr,
                                      IsoparametricTransformation &Transformation, 
                                      IsoparametricTransformation &Transformation2,
