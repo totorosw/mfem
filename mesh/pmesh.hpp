@@ -259,17 +259,30 @@ public:
    int GetNGroups() const { return gtopo.NGroups(); }
 
    // ADDED //
+
    Table const *GetSharedFacesInGroups() 
    { 
-       if (Dim == 3) 
+
+       // determine whether faces are quads or triangles
+       // NOTE: this assumes all mesh elements have the same geometry type
+       Array<int> verts;
+       GetFaceVertices(0, verts);
+       int nv = verts.Size();
+
+       if (Dim == 3 && nv == 3) 
        {
-           return &group_sface; 
+           return &group_stria; 
+       } 
+       else if (Dim == 3 && nv == 4) 
+       {
+           return &group_squad; 
        } 
        else
        {
            return &group_sedge; 
        }
    }
+
    // ADDED //
 
    ///@{ @name These methods require group > 0
