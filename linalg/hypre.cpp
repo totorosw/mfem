@@ -1570,15 +1570,21 @@ HypreParMatrix *Add(double alpha, const HypreParMatrix &A,
    return new HypreParMatrix(C);
 }
 
-HypreParMatrix * ParMult(const HypreParMatrix *A, const HypreParMatrix *B)
+HypreParMatrix * ParMult(const HypreParMatrix *A, const HypreParMatrix *B,
+                         bool own_matrix)
 {
    hypre_ParCSRMatrix * ab;
    ab = hypre_ParMatmul(*A,*B);
    hypre_ParCSRMatrixSetNumNonzeros(ab);
 
    hypre_MatvecCommPkgCreate(ab);
-
-   return new HypreParMatrix(ab);
+   HypreParMatrix *C = new HypreParMatrix(ab);
+   if (own_matrix)
+   {
+      C->CopyRowStarts();
+      C->CopyColStarts();
+   }
+   return C;
 }
 
 HypreParMatrix * ParAdd(const HypreParMatrix *A, const HypreParMatrix *B)
