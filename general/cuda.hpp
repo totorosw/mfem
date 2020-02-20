@@ -40,10 +40,7 @@
    } \
    while (0)
 #define MFEM_DEVICE_SYNC MFEM_GPU_CHECK(cudaDeviceSynchronize())
-#else
-#define MFEM_DEVICE
-#define MFEM_HOST_DEVICE
-#define MFEM_DEVICE_SYNC
+#define MFEM_STREAM_SYNC MFEM_GPU_CHECK(cudaStreamSynchronize(0))
 #endif // MFEM_USE_CUDA
 
 // Define the MFEM inner threading macros
@@ -53,12 +50,6 @@
 #define MFEM_THREAD_ID(k) threadIdx.k
 #define MFEM_THREAD_SIZE(k) blockDim.k
 #define MFEM_FOREACH_THREAD(i,k,N) for(int i=threadIdx.k; i<N; i+=blockDim.k)
-#else
-#define MFEM_SHARED
-#define MFEM_SYNC_THREAD
-#define MFEM_THREAD_ID(k) 0
-#define MFEM_THREAD_SIZE(k) 1
-#define MFEM_FOREACH_THREAD(i,k,N) for(int i=0; i<N; i++)
 #endif
 
 namespace mfem
@@ -72,6 +63,9 @@ void mfem_cuda_error(cudaError_t err, const char *expr, const char *func,
 
 /// Allocates device memory
 void* CuMemAlloc(void **d_ptr, size_t bytes);
+
+/// Allocates managed device memory
+void* CuMallocManaged(void **d_ptr, size_t bytes);
 
 /// Frees device memory
 void* CuMemFree(void *d_ptr);
@@ -93,6 +87,9 @@ void* CuMemcpyDtoH(void *h_dst, const void *d_src, size_t bytes);
 
 /// Copies memory from Device to Host
 void* CuMemcpyDtoHAsync(void *h_dst, const void *d_src, size_t bytes);
+
+/// Check the error code returned by cudaGetLastError(), aborting on error.
+void CuCheckLastError();
 
 /// Get the number of CUDA devices
 int CuGetDeviceCount();
