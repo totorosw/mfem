@@ -313,6 +313,20 @@ public:
    void AddBdrFaceIntegrator(BilinearFormIntegrator *bfi,
                              Array<int> &bdr_marker);
 
+   // ADDED //
+   /// Resets to new Domain Integrator.
+   void ResetDomainIntegrator(BilinearFormIntegrator *bfi);
+
+   /// Resets to new Boundary Integrator.
+   void ResetBoundaryIntegrator(BilinearFormIntegrator *bfi);
+
+   /// Resets to new interior Face Integrator.
+   void ResetInteriorFaceIntegrator(BilinearFormIntegrator *bfi);
+
+   /// Resets to new boundary Face Integrator.
+   void ResetBdrFaceIntegrator(BilinearFormIntegrator *bfi);
+   // ADDED
+
    void operator=(const double a)
    {
       if (mat != NULL) { *mat = a; }
@@ -677,22 +691,6 @@ public:
    /// Adds a boundary trace face integrator. Assumes ownership of @a bfi.
    void AddBdrTraceFaceIntegrator (BilinearFormIntegrator * bfi,
                                    Array<int> &bdr_marker);
-
-
-   // ADDED //
-   /// Resets to new Domain Integrator.
-   void ResetDomainIntegrator(BilinearFormIntegrator *bfi);
-
-   /// Resets to new Boundary Integrator.
-   void ResetBoundaryIntegrator(BilinearFormIntegrator *bfi);
-
-   /// Resets to new interior Face Integrator.
-   void ResetInteriorFaceIntegrator(BilinearFormIntegrator *bfi);
-
-   /// Resets to new boundary Face Integrator.
-   void ResetBdrFaceIntegrator(BilinearFormIntegrator *bfi);
-   // ADDED
-
 
    /// Access all integrators added with AddDomainIntegrator().
    Array<BilinearFormIntegrator*> *GetDBFI() { return &dbfi; }
