@@ -72,14 +72,6 @@ protected:
    Table group_stria;  // contains shared triangle indices
    Table group_squad;  // contains shared quadrilateral indices
 
-   // ADDED //
-   Array<int> shared_face_to_global_face;
-   Array<int> shared_face_to_MPI_rank;
-   Array<int> vert_local_to_global;
-   int elem_local_to_global;
-   Table group_sface; // in 3D, union of group_stria and group_squad
-   // ADDED //
-
    /// Shared to local index mapping.
    Array<int> svert_lvert;
    Array<int> sedge_ledge;
@@ -107,9 +99,6 @@ protected:
 
    bool DecodeFaceSplittings(HashTable<Hashed2> &v_to_v, const int *v,
                              const Array<unsigned> &codes, int &pos);
-
-   void GetFaceNbrElementTransformation(
-      int i, IsoparametricTransformation *ElTr);
 
    ElementTransformation* GetGhostFaceTransformation(
       FaceElementTransformations* FETr, Element::Type face_type,
@@ -254,6 +243,14 @@ public:
    Table            send_face_nbr_elements;
    Table            send_face_nbr_vertices;
 
+   // ADDED //
+   Array<int> shared_face_to_global_face;
+   Array<int> shared_face_to_MPI_rank;
+   Array<int> vert_local_to_global;
+   int elem_local_to_global;
+   Table group_sface; // in 3D, union of group_stria and group_squad
+   // ADDED //
+
    ParNCMesh* pncmesh;
 
    int GetNGroups() const { return gtopo.NGroups(); }
@@ -283,6 +280,11 @@ public:
        }
    }
 
+   // ADDED //
+
+   // ADDED (Moved from protected) //
+   void GetFaceNbrElementTransformation(
+      int i, IsoparametricTransformation *ElTr);
    // ADDED //
 
    ///@{ @name These methods require group > 0
