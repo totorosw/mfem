@@ -2367,12 +2367,7 @@ GetSharedFaceTransformations(int sf, bool fill2)
 }
 
 
-
-
-// ADDED //
-
-
-
+// ------------------------ ADDED ------------------------ //
 ElementTransformation* ParMesh::GetGhostFaceTransformation(
                              FaceElementTransformations* FETr, 
                              IsoparametricTransformation &FaceTransformation,
@@ -2405,10 +2400,6 @@ ElementTransformation* ParMesh::GetGhostFaceTransformation(
    FaceTransformation.FinalizeTransformation();
    return &FaceTransformation;
 }
-
-
-
-
 
 FaceElementTransformations *ParMesh::
 GetSharedFaceTransformations(int sf, 
@@ -2502,11 +2493,7 @@ GetSharedFaceTransformations(int sf,
 
    return &FaceElemTr;
 }
-
-
-
-
-// ADDED //
+// ------------------------ ADDED ------------------------ //
 
 
 

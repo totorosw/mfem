@@ -116,7 +116,7 @@ protected:
       Geometry::Type face_geom);
 
    // ADDED //
-   void GetGhostFaceTransformation(FaceElementTransformations* FETr, 
+   ElementTransformation* GetGhostFaceTransformation(FaceElementTransformations* FETr, 
                                    IsoparametricTransformation &FaceTransformation,
                                    Element::Type face_type, Geometry::Type face_geom);
    // ADDED //
