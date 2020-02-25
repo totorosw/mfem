@@ -320,9 +320,7 @@ inline void MmuDealloc(void *ptr, const size_t bytes)
 inline void MmuProtect(const void *ptr, const size_t bytes)
 {
    if (!::mprotect(const_cast<void*>(ptr), bytes, PROT_NONE)) { return; }
-   // Silently returning, should be only when !own and
-   // h_mt has been set with MemoryManager::host_mem_type
-   // mfem_error("mmu protection (NONE) error");
+   mfem_error("MMU protection (NONE) error");
 }
 
 /// MMU un-protection, through ::mprotect with read/write accesses
@@ -330,7 +328,7 @@ inline void MmuAllow(const void *ptr, const size_t bytes)
 {
    const int RW = PROT_READ | PROT_WRITE;
    if (!::mprotect(const_cast<void*>(ptr), bytes, RW)) { return; }
-   // mfem_error("mmu protection (R/W) error");
+   mfem_error("MMU protection (R/W) error");
 }
 #else
 inline void MmuInit() { }
@@ -1389,8 +1387,25 @@ MemoryType MemoryManager::device_mem_type = MemoryType::HOST;
 
 const char *MemoryTypeName[MemoryTypeSize] =
 {
-   "host-std", "host-32", "host-64", "host-debug", "host-umpire", "managed",
-   "device", "device-debug", "device-umpire"
+   "host-std", "host-32", "host-64", "host-debug", "host-umpire",
+#if defined(MFEM_USE_CUDA)
+   "cuda-uvm",
+   "cuda",
+#elif defined(MFEM_USE_HIP)
+   "hip-uvm",
+   "hip",
+#else
+   "managed",
+   "device",
+#endif
+   "device-debug",
+#if defined(MFEM_USE_CUDA)
+   "cuda-umpire"
+#elif defined(MFEM_USE_HIP)
+   "hip-umpire"
+#else
+   "device-umpire"
+#endif
 };
 
 } // namespace mfem

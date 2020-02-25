@@ -3659,19 +3659,18 @@ static void sedov_tests(MPI_Session &mpi)
                          };
    REQUIRE(sedov(mpi, argn(argv3D), const_cast<char**>(argv3D))==0);
 
-   // 3D refined case desactivated to avoid long tests
-   /*const char *argv3Drs1[]= {"sedov_tests",
+   const char *argv3Drs1[]= {"sedov_tests",
                              "-rs", "1", "-ms", "28",
                              "-m", "data/cube01_hex.mesh",
                              nullptr
                             };
-   REQUIRE(sedov(mpi, argn(argv3Drs1), const_cast<char**>(argv3Drs1))==0);*/
+   REQUIRE(sedov(mpi, argn(argv3Drs1), const_cast<char**>(argv3Drs1))==0);
 
 }
 
 #ifndef MFEM_SEDOV_TESTS
 
-TEST_CASE("Sedov", "[Sedov]")
+TEST_CASE("Sedov", "[Sedov], [Parallel]")
 {
 #ifdef MFEM_USE_MPI
    MPI_Session &mpi = *GlobalMPISession;
@@ -3683,7 +3682,7 @@ TEST_CASE("Sedov", "[Sedov]")
 
 #else
 
-TEST_CASE("Sedov", "[Sedov]")
+TEST_CASE("Sedov", "[Sedov], [Parallel]")
 {
 #ifdef MFEM_USE_MPI
    MPI_Session &mpi = *GlobalMPISession;
